@@ -1,15 +1,48 @@
-from flask import Flask, jsonify, request
-from flask_cors import CORS
+import json
 import re
-import ast
-import copy
+from app.resources.ContentTypes import ContentTypes
+from flask import Blueprint, Response
+from flask import Response
+from flask import jsonify, request
+from service.Methods import Api
+from werkzeug.exceptions import HTTPException
 
-app = Flask(__name__)
+api_po: Blueprint = Blueprint(
+    'operational', __name__, url_prefix='/operational'
+)
 
-CORS(app, origins='*', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
+api_service = Api()
 
 
-@app.route('/api/PesquisaOperacional/Simplex', methods=['POST'])
+@api_po.errorhandler(HTTPException)
+def handle_exception(error: any) -> Response:
+    """
+    Function to intercept error and formatter return response
+    :param error: Exception error found server
+    :return: Response with error formatted
+    """
+    response: Response = error.get_response()
+    response.data = json.dumps({
+        "code": error.code,
+        "name": error.name,
+        "description": str(error.description)
+    })
+    response.content_type = ContentTypes.APPLICATION_JSON
+    return response
+
+
+@api_po.route('/graphic', methods=['POST'])
+def start_graphic():
+    try:
+        json_data = request.json
+
+        result = api_service.start(json_data)
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({'error': e}), 404
+
+
+@api_po.route('/simplex', methods=['POST'])
 def PesquisaOperacional_Simplex():
     try:
         # Informacoes recebidas
@@ -174,109 +207,3 @@ def calcularSimplex(expressao):
     return item
 
 
-# Verificar Opções de lucro
-@app.route('/api/PesquisaOperacional/LucroSimplex', methods=['POST'])
-def PesquisaOperacional_LucroSimplex():
-    try:
-        # Informacoes recebidas
-        data = request.get_json()
-        expressao = data.get('Equacao')
-        listaviaveis = data.get('listviaveis')
-
-        dados = []
-        solucoes = []
-        for x in listaviaveis:
-            d = x['informacao'][0]['solucao']
-            solucoes.append(d)
-            dados.append(d[11:])
-        dados = [ast.literal_eval(dado) for dado in dados]
-
-        lista = []
-        for x in dados:
-            equacao = expressao
-            for i, valor in enumerate(x, start=1):
-                equacao = equacao.replace(f'x{i}', '*' + valor if f'x{i}' in expressao else valor)
-            lista.append(equacao)
-
-        cont = 0
-        lista_lucro = []
-        for x in lista:
-            padrao_multiplicacao = re.findall(r'\d+\*\d+', x)
-            # Calcular o resultado das multiplicações
-            for operacao in padrao_multiplicacao:
-                numeros = list(map(int, re.findall(r'\d+', operacao)))
-                resultado = numeros[0] * numeros[1]
-                expressaocalc = x.replace(operacao, str(resultado))
-
-            parte_1 = (expressaocalc)
-            parte_2 = str(eval(expressaocalc))
-
-            item = {
-                "solucao": solucoes[cont],
-                "equacao": expressao,
-                "expressao": x,
-                "parte_1": parte_1,
-                "parte_2": parte_2,
-            }
-            lista_lucro.append(item)
-            cont += 1
-
-        # Retornando soluções já caluladas em formato de lista
-        return jsonify({'Solucoes': lista_lucro}), 200
-    except Exception as e:
-        print(str(e))
-        return jsonify({'error': 'Ocorreu um erro no servidor'}), 500
-
-
-# Verificar Viabilidades Grafico
-@app.route('/api/PesquisaOperacional/Grafic', methods=['POST'])
-def PesquisaOperacional_Grafic():
-    try:
-        # Informacoes recebidas
-        data = request.get_json()
-        qtdevariaveis = data.get('qtdevariaveis')
-        lista_restricoes = data.get('informacoes')
-
-        lista_info_prev = []
-        for x in lista_restricoes:
-            lista_x1 = copy.deepcopy(x)
-            lista_x2 = copy.deepcopy(x)
-            restricao = x['restricao']
-
-            x1 = []
-            x1.append(lista_x1)
-            for item in x1:
-                item['restricao'] = item['restricao'].replace('x2', '*0')
-
-            x2 = []
-            x2.append(lista_x2)
-            for item in x2:
-                item['restricao'] = item['restricao'].replace('x1', '*0')
-
-            item = {
-                "nome_restricao": x['nome_res'],
-                "restricao": restricao,
-                "expressao_x1": x1,
-                "expressao_x2": x2
-            }
-            lista_info_prev.append(item)
-
-        return jsonify({'Solucoes': "lista_lucro"}), 200
-    except Exception as e:
-        print(str(e))
-        return jsonify({'error': 'Ocorreu um erro no servidor'}), 500
-
-
-
-
-
-
-
-
-
-
-if __name__ == '__main__':
-    app.config['DEBUG'] = True
-    app.config['PROPAGATE_EXCEPTIONS'] = True
-    # app.run(host='0.0.0.0', port=5000, ssl_context=(cert_path, key_path))
-    app.run(host='0.0.0.0', port=5000)
