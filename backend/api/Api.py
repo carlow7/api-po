@@ -1,10 +1,10 @@
 import json
 import re
-from app.resources.ContentTypes import ContentTypes
-from flask import Blueprint, Response
+from backend.app.resources.ContentTypes import ContentTypes
+from flask import Blueprint
 from flask import Response
 from flask import jsonify, request
-from service.Methods import Api
+from backend.service.Methods import Api
 from werkzeug.exceptions import HTTPException
 
 api_po: Blueprint = Blueprint(

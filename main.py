@@ -1,3 +1,3 @@
-from app.Application import Application
+from backend.app.Application import Application
 
 Application().run()

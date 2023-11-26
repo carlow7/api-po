@@ -69,7 +69,7 @@ class Api:
 
     @staticmethod
     def create_graph(data):
-        data = data
+        plt.switch_backend('agg')  # Mudar o backend do Matplotlib
 
         for item in data:
             for key, value in item.items():
@@ -103,5 +103,4 @@ class Api:
         img_base64 = base64.b64encode(img_stream.read()).decode('utf-8')
 
         return img_base64
-
 
