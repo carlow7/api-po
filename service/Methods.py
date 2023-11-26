@@ -96,8 +96,12 @@ class Api:
         plt.savefig(img_stream, format='png', bbox_inches='tight')
         img_stream.seek(0)
 
+        # Close the figure
+        plt.close()
+
         # Convert the BytesIO object to base64
         img_base64 = base64.b64encode(img_stream.read()).decode('utf-8')
 
         return img_base64
+
 
