@@ -16,7 +16,7 @@ def create_form():
         col1, col2 = st.columns(2)
         with col1:
             st.header(f"Expressão {i + 1}")
-            valor_x = st.number_input(f"Digite valor de X para a Expressão {i + 1}", value=0, key=f"valor_x_{i}")
+            valor_x = st.text_input(f"Digite valor de X para a Expressão {i + 1}", key=f"valor_x_{i}")
             restricao_nome = st.text_input(f"Digite Nome Restrição para a Expressão {i + 1}", key=f"restricao_nome_{i}")
             expression = st.text_input(f"Digite a Expressão {i + 1} (ex: 2x1 + 3x2 = 12)", key=f"expression_{i}")
 
@@ -98,8 +98,6 @@ if "results" in st.session_state:
                     for linha, valor in data.items():
                         st.write(f"{linha}: {valor}")
 
-    # Adicionar cards para os resultados
-    st.title("Resultados em Cards")
     for result in results_list:
         for nome, data in result.items():
             st.write(f"#### Resultado para {nome}")
@@ -112,6 +110,22 @@ if "results" in st.session_state:
         image = Image.open(BytesIO(base64.b64decode(image_data)))
         st.image(image, caption='Imagem Resultado', use_column_width=True)
 
+
+# Função para limpar os resultados e voltar ao formulário inicial
+def clear_results():
+    if "results" in st.session_state:
+        del st.session_state.results
+    if "image_data" in st.session_state:
+        del st.session_state.image_data
+    st.experimental_rerun()
+
+
+# Página de Resultados
+if "results" in st.session_state:
+
+    # Botão para limpar os resultados e voltar ao formulário inicial
+    if st.button("Limpar Resultados e Voltar"):
+        clear_results()
+
 # Executar o formulário
 create_form()
-
