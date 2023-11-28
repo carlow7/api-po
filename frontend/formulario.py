@@ -1,67 +1,65 @@
 import streamlit as st
 import requests
 from io import BytesIO
+import re
 from PIL import Image
 import base64
+
 
 def create_form():
     st.title("Sistema de cálculo - Solução Gráfica")
 
-    col1, col2 = st.columns(2)
+    num_forms = st.slider("Quantidade de formulários", min_value=1, max_value=5, value=1)
 
-    with col1:
-        st.header("Expressão 1")
-        x1 = st.number_input("x1", value=0, key="x1_obj1")
-        x2 = st.number_input("x2", value=x1, key="x2_obj1")
-        qtdx1 = st.number_input("qtdx1", value=0, key="qtdx1_obj1")
-        qtdx2 = st.number_input("qtdx2", value=0, key="qtdx2_obj1")
-        max_val = st.number_input("max", value=0, key="max_obj1")
-        restricao = st.selectbox("Restrição", ["="], key="restricao_obj1")
-        nome = st.text_input("Nome", "Nome do produto 1", key="nome_obj1")
+    forms_data = []
+    for i in range(num_forms):
+        col1, col2 = st.columns(2)
+        with col1:
+            st.header(f"Expressão {i + 1}")
+            valor_x = st.number_input(f"Digite valor de X para a Expressão {i + 1}", value=0, key=f"valor_x_{i}")
+            restricao_nome = st.text_input(f"Digite Nome Restrição para a Expressão {i + 1}", key=f"restricao_nome_{i}")
+            expression = st.text_input(f"Digite a Expressão {i + 1} (ex: 2x1 + 3x2 = 12)", key=f"expression_{i}")
 
-    with col2:
-        st.header("Expressão 2")
-        x1_2 = st.number_input("x1", value=0, key="x1_obj2")
-        x2_2 = st.number_input("x2", value=x1_2, key="x2_obj2")
-        qtdx1_2 = st.number_input("qtdx1", value=0, key="qtdx1_obj2")
-        qtdx2_2 = st.number_input("qtdx2", value=0, key="qtdx2_obj2")
-        max_val_2 = st.number_input("max", value=0, key="max_obj2")
-        restricao_2 = st.selectbox("Restrição", ["="], key="restricao_obj2")
-        nome_2 = st.text_input("Nome", "Nome do produto 2", key="nome_obj2")
+        forms_data.append((valor_x, restricao_nome, expression))
 
     submit_button = st.button("Mostrar resultados", key="submit_button")
 
     if submit_button:
-        # Verificar se todos os campos obrigatórios estão preenchidos
-        if not all([x1, x2, qtdx1, qtdx2, max_val, restricao, nome, x1_2, x2_2, qtdx1_2, qtdx2_2, max_val_2, restricao_2, nome_2]):
-            st.warning("Por favor, preencha todos os campos.")
-            return
+        payloads = []
+        for valor_x, restricao_nome, expression in forms_data:
+            if not all([valor_x, restricao_nome, expression]):
+                st.warning("Por favor, preencha todos os campos para as expressões.")
+                return
 
+            coefficients = re.findall(r'(\d+)\s*x(\d+)', expression)
+            constant = int(re.search(r'= (\d+)', expression).group(1))
 
-        payload = {
-            "dados": [
-                {
-                    "x1": x1,
-                    "x2": x2,
-                    "qtdx1": qtdx1,
-                    "qtdx2": qtdx2,
-                    "max": max_val,
-                    "restricao": restricao,
-                    "nome": nome,
-                },
-                {
-                    "x1": x1_2,
-                    "x2": x2_2,
-                    "qtdx1": qtdx1_2,
-                    "qtdx2": qtdx2_2,
-                    "max": max_val_2,
-                    "restricao": restricao_2,
-                    "nome": nome_2,
-                },
-            ]
-        }
+            if not constant:
+                st.warning("Forneça uma expressão válida com um valor constante.")
+                return
 
+            qtdx1, qtdx2 = 0, 0
+            for coef, var in coefficients:
+                if var == '1':
+                    qtdx1 = int(coef)
+                elif var == '2':
+                    qtdx2 = int(coef)
 
+            payload_data = {
+                "x1": valor_x,
+                "x2": valor_x,
+                "qtdx1": qtdx1,
+                "qtdx2": qtdx2,
+                "max": constant,
+                "restricao": '=',
+                "nome": restricao_nome,
+            }
+
+            payloads.append(payload_data)
+
+        payload = {"dados": payloads}
+
+        print(payload)
         # Enviar a payload para a rota fornecida
         response = requests.post("http://127.0.0.1:5000/operational/graphic", json=payload)
 
@@ -116,3 +114,4 @@ if "results" in st.session_state:
 
 # Executar o formulário
 create_form()
+
